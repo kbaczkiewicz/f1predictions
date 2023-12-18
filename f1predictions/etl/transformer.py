@@ -100,7 +100,7 @@ class RacesTransformer(Transformer):
     @override
     def transform_to_model(self) -> Generator[Race, None, None]:
         df = self.exporter.export().drop_duplicates().reset_index()
-        for i in range(len(df)):
+        for i in range(1, len(df)):
             race = Race()
             race.id = i
             race.name = str(df.loc[i, 'name'])
@@ -119,12 +119,29 @@ class RoundsTransformer(RelatedModelTransformer):
     @override
     def transform_to_model(self) -> Generator[Round, None, None]:
         df = self.exporter.export().drop_duplicates().reset_index()
+        print('rounds')
         for i in range(len(df)):
-            pass
+            race_name = df.loc[i, 'name']
+            print(self.related_model_data.head())
+            break;
+            round = Round()
+            round.id = i
+            #round.race_id = int(self.related_model_data.where(self.related_model_data['name'] == str(race_name)).drop_duplicates().reset_index().dropna().loc[0, 'id'])
+            round.round_number = df.loc[i, 'round']
+            round.year = df.loc[i, 'year']
+
+
+        yield None
 
 
 
 def get_rounds_transformer() -> RacesTransformer:
-    exporter = Exporter('races.csv', ['name', 'circuitId'])
+    Session = get_session()
+    exporter = Exporter('races.csv', ['name', 'round', 'year'])
+    with Session() as session:
+        races = session.scalars(select(Race))
+        
+        races_dataframe = pd.DataFrame()
+        print(races_dataframe.head())
 
-    return RoundsTransformer(exporter)
+        return RoundsTransformer(exporter, races_dataframe)

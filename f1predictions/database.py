@@ -26,14 +26,9 @@ def create_schema():
     Base.metadata.create_all(get_engine())
 
 def get_session():
-    global _SESSION
-    if _SESSION is not None:
-        return _SESSION
-
     session = sessionmaker(get_engine())
-    _SESSION = session()
 
-    return _SESSION
+    return session
 
 
 def clear_database():

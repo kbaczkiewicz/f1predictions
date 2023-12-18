@@ -5,11 +5,16 @@ from f1predictions.database import get_session, clear_database
 
 def load_data(models: dict[Generator]):
     clear_database()
-    db_session = get_session()
+    append_data(models)
+    
 
-    for model in models.values():
-        for data in model:
-            db_session.add(data)
+def append_data(models: dict[Generator]):
+    Session = get_session()
+        
+    with Session() as db_session:
+        for model in models.values():
+            for data in model:
+                pass
+                db_session.add(data)
 
-    db_session.commit()
-
+        db_session.commit()

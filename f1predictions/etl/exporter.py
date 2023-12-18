@@ -1,7 +1,7 @@
 import pandas as pd
 import os.path
 
-_DATADIR = os.path.basename(__file__) + '/../data'
+_DATADIR = os.path.dirname(__file__) + '/../../data'
 
 
 class Exporter:
