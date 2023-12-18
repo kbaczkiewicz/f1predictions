@@ -1,0 +1,10 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgres:14-alpine
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_PASSWORD=toor
+      - POSTGRES_USER=root
+      - POSTGRES_DB=f1predictions

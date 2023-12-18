@@ -1,0 +1,82 @@
+DRIVER_CONSTRUCTOR
+- id
+- driverId
+- constructorId
+
+DRIVER:
+- id
+- name
+- surname
+
+STATUS:
+- id
+- status
+
+CONSTRUCTOR:
+- id
+- name
+
+CIRCUIT:
+- id
+- name
+
+RACE:
+- id
+- name
+- circuitId
+
+ROUND:
+- id
+- raceId
+- year
+- roundNumber
+
+QUALIFYING_RESULT:
+- id
+- roundId
+- constructorId
+- driverId
+- position
+- q1
+- q2
+- q3
+
+RACE_DRIVER_RESULT:
+- id
+- driverConstructorId
+- roundId
+- points
+- position
+- fastestLapTime
+- fastestLapSpeed
+- statusId
+
+RACE_CONSTRUCTOR_RESULT:
+- id
+- roundId
+- constructorId
+- points
+
+RACE_DRIVER_STANDINGS:
+- id
+- driverConstructorId
+- year
+- position
+- points
+- wins
+
+RACE_CONSTRUCTOR_STANDINGS:
+- id
+- constructorId
+- year
+- position
+- points
+- wins
+
+LAP_TIMES:
+- id
+- raceId
+- driverConstructorId
+- lap
+- position
+- time
