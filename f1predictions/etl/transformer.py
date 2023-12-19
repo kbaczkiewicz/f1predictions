@@ -3,9 +3,10 @@ from typing import Generator, override
 from f1predictions.database import get_session
 from sqlalchemy import select
 import pandas as pd
+import sys
 
 from f1predictions.etl.exporter import Exporter
-from f1predictions.model import Driver, Constructor, Status, Circuit, Race, Round
+from f1predictions.model import Driver, Constructor, Status, Circuit, Race, Round, DriverConstructor, RaceDriverResult, RaceConstructorResult, RaceDriverStandings, RaceConstructorStandings, LapTimes, QualifyingResult
 
 
 class Transformer(ABC):
@@ -99,10 +100,10 @@ def get_circuits_transformer() -> CircuitsTransformer:
 class RacesTransformer(Transformer):
     @override
     def transform_to_model(self) -> Generator[Race, None, None]:
-        df = self.exporter.export().drop_duplicates().reset_index()
-        for i in range(1, len(df)):
+        df = self.exporter.export().drop_duplicates(['name']).reset_index()
+        for i in range(len(df)):
             race = Race()
-            race.id = i
+            race.id = i + 1
             race.name = str(df.loc[i, 'name'])
             race.circuit_id = int(df.loc[i, 'circuitId'])
 
@@ -119,19 +120,14 @@ class RoundsTransformer(RelatedModelTransformer):
     @override
     def transform_to_model(self) -> Generator[Round, None, None]:
         df = self.exporter.export().drop_duplicates().reset_index()
-        print('rounds')
         for i in range(len(df)):
             race_name = df.loc[i, 'name']
-            print(self.related_model_data.head())
-            break;
             round = Round()
             round.id = i
-            #round.race_id = int(self.related_model_data.where(self.related_model_data['name'] == str(race_name)).drop_duplicates().reset_index().dropna().loc[0, 'id'])
-            round.round_number = df.loc[i, 'round']
-            round.year = df.loc[i, 'year']
-
-
-        yield None
+            round.race_id = int(self.related_model_data.where(self.related_model_data['name'] == str(race_name)).drop_duplicates().dropna().values[0][0])
+            round.round_number = int(df.loc[i, 'round'])
+            round.year = int(df.loc[i, 'year'])
+            yield round
 
 
 
@@ -140,8 +136,44 @@ def get_rounds_transformer() -> RacesTransformer:
     exporter = Exporter('races.csv', ['name', 'round', 'year'])
     with Session() as session:
         races = session.scalars(select(Race))
-        
-        races_dataframe = pd.DataFrame()
-        print(races_dataframe.head())
+        data = [(i.id, i.name) for i in races]
+        races_dataframe = pd.DataFrame({'id': [i[0] for i in data], 'name': [i[1] for i in data]})
 
         return RoundsTransformer(exporter, races_dataframe)
+    
+
+class DriversConstructorsTransformer(Transformer):
+    @override
+    def transform_to_model(self) -> Generator[DriverConstructor, None, None]:
+        df = self.exporter.export().drop_duplicates(['driverId', 'constructorId']).dropna()
+        id = 1
+        for value in df.values:
+            driver_constructor = DriverConstructor()
+            driver_constructor.id = id
+            driver_constructor.driver_id = int(value[0])
+            driver_constructor.constructor_id = int(value[1])
+            id += 1
+
+            yield driver_constructor
+
+
+def get_drivers_constructors_transformer() -> DriversConstructorsTransformer:
+    exporter = Exporter('results.csv', ['driverId', 'constructorId'])
+    
+    return DriversConstructorsTransformer(exporter)
+
+
+class RaceDriversResultsTransformer(RelatedModelTransformer):
+    @override
+    def transform_to_model(self) -> Generator[Race, None, None]:
+        df = self.exporter.export()
+        for i in range(len(df)):
+            race_driver_result = RaceDriverResult()
+            driver_constructor = self.related_model_data.where \
+                (self.related_model_data['driverId'] == df.loc[i, 'driverId'] and self.related_model_data['constructorId'] == df.loc[i, 'constructorId'])
+            
+            race_driver_result.id = i + 1
+            race_driver_result.driver_constructor_id = driver_constructor.values[0][0]
+            race_driver_result.round_id
+            
+            yield  race_driver_result
