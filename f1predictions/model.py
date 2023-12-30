@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 from sqlalchemy import ForeignKey, String, Integer, Float
 import sqlalchemy.orm as orm
 from .database import Base
@@ -70,8 +70,7 @@ class QualifyingResult(Base):
     q3: orm.Mapped[Optional[int]]
 
     round_id: orm.Mapped[int] = orm.mapped_column(ForeignKey("round.id"))
-    driver_id: orm.Mapped[int] = orm.mapped_column(ForeignKey("driver.id"))
-    constructor_id: orm.Mapped[int] = orm.mapped_column(ForeignKey("constructor.id"))
+    driver_constructor_id: orm.Mapped[int] = orm.mapped_column(ForeignKey('driver_constructor.id'))
 
 
 class RaceDriverResult(Base):
@@ -80,8 +79,8 @@ class RaceDriverResult(Base):
     id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
     points: orm.Mapped[float] = orm.mapped_column(Float)
     position: orm.Mapped[int] = orm.mapped_column(Integer)
-    fastestLapTime: orm.Mapped[int] = orm.mapped_column(Integer)
-    fastestLapSpeed: orm.Mapped[float] = orm.mapped_column(Float)
+    fastest_lap_time: orm.Mapped[int] = orm.mapped_column(Integer)
+    fastest_lap_speed: orm.Mapped[float] = orm.mapped_column(Float)
 
     driver_constructor_id: orm.Mapped[int] = orm.mapped_column(ForeignKey('driver_constructor.id'))
     round_id: orm.Mapped[int] = orm.mapped_column(ForeignKey('round.id'))
