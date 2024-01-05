@@ -129,3 +129,4 @@ class LapTimes(Base):
     time: orm.Mapped[int] = orm.mapped_column(Integer)
 
     driver_constructor_id: orm.Mapped[int] = orm.mapped_column(ForeignKey('driver_constructor.id'))
+    round_id: orm.Mapped[int] = orm.mapped_column(ForeignKey('round.id'))

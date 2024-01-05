@@ -1,17 +1,15 @@
 from abc import abstractmethod, ABC
 from typing import Generator, override
-from f1predictions.database import get_session
-from sqlalchemy import select
+from f1predictions.database import get_session, get_connection
+from sqlalchemy import select, text
 import pandas as pd
-import sys
-
-from f1predictions.etl.exporter import Exporter
+from f1predictions.etl.extractor import Extractor, RelatedModelsExtractor, DirectDataFrameExtractor
 from f1predictions.model import Driver, Constructor, Status, Circuit, Race, Round, DriverConstructor, RaceDriverResult, RaceConstructorResult, RaceDriverStandings, RaceConstructorStandings, LapTimes, QualifyingResult
-from f1predictions.utils import convert_time_to_ms
+from f1predictions.utils import convert_time_to_ms, create_drivers_constructors_dataframe, find_driver_constructor_id
 
 
 class Transformer(ABC):
-    def __init__(self, exporter: Exporter):
+    def __init__(self, exporter: Extractor):
         self.exporter = exporter
 
     @abstractmethod
@@ -20,7 +18,7 @@ class Transformer(ABC):
 
 
 class RelatedModelTransformer(Transformer, ABC):
-    def __init__(self, exporter: Exporter, related_model_data: pd.DataFrame):
+    def __init__(self, exporter: Extractor, related_model_data: pd.DataFrame):
         super().__init__(exporter)
         self.related_model_data = related_model_data
 
@@ -28,7 +26,7 @@ class RelatedModelTransformer(Transformer, ABC):
 class DriversTransformer(Transformer):
     @override
     def transform_to_model(self) -> Generator[Driver, None, None]:
-        df = self.exporter.export()
+        df = self.exporter.extract()
         for i in range(len(df)):
             driver = Driver()
             driver.id = int(df.loc[i, 'driverId'])
@@ -39,7 +37,7 @@ class DriversTransformer(Transformer):
 
 
 def get_drivers_transformer() -> DriversTransformer:
-    exporter = Exporter('drivers.csv', ['driverId', 'forename', 'surname'])
+    exporter = Extractor('drivers.csv', ['driverId', 'forename', 'surname'])
 
     return DriversTransformer(exporter)
 
@@ -47,7 +45,7 @@ def get_drivers_transformer() -> DriversTransformer:
 class ConstructorsTransformer(Transformer):
     @override
     def transform_to_model(self) -> Generator[Constructor, None, None]:
-        df = self.exporter.export()
+        df = self.exporter.extract()
         for i in range(len(df)):
             constructor = Constructor()
             constructor.id = int(df.loc[i, 'constructorId'])
@@ -57,7 +55,7 @@ class ConstructorsTransformer(Transformer):
 
 
 def get_constructors_transformer() -> ConstructorsTransformer:
-    exporter = Exporter('constructors.csv', ['constructorId', 'name'])
+    exporter = Extractor('constructors.csv', ['constructorId', 'name'])
 
     return ConstructorsTransformer(exporter)
 
@@ -65,7 +63,7 @@ def get_constructors_transformer() -> ConstructorsTransformer:
 class StatusesTransformer(Transformer):
     @override
     def transform_to_model(self) -> Generator[Status, None, None]:
-        df = self.exporter.export()
+        df = self.exporter.extract()
         for i in range(len(df)):
             status = Status()
             status.id = int(df.loc[i, 'statusId'])
@@ -75,7 +73,7 @@ class StatusesTransformer(Transformer):
 
 
 def get_statuses_transformer() -> StatusesTransformer:
-    exporter = Exporter('status.csv', ['statusId', 'status'])
+    exporter = Extractor('status.csv', ['statusId', 'status'])
 
     return StatusesTransformer(exporter)
 
@@ -83,7 +81,7 @@ def get_statuses_transformer() -> StatusesTransformer:
 class CircuitsTransformer(Transformer):
     @override
     def transform_to_model(self) -> Generator[Circuit, None, None]:
-        df = self.exporter.export()
+        df = self.exporter.extract()
         for i in range(len(df)):
             circuit = Circuit()
             circuit.id = int(df.loc[i, 'circuitId'])
@@ -93,7 +91,7 @@ class CircuitsTransformer(Transformer):
 
 
 def get_circuits_transformer() -> CircuitsTransformer:
-    exporter = Exporter('circuits.csv', ['circuitId', 'name'])
+    exporter = Extractor('circuits.csv', ['circuitId', 'name'])
 
     return CircuitsTransformer(exporter)
 
@@ -101,7 +99,7 @@ def get_circuits_transformer() -> CircuitsTransformer:
 class RacesTransformer(Transformer):
     @override
     def transform_to_model(self) -> Generator[Race, None, None]:
-        df = self.exporter.export().drop_duplicates(['name']).reset_index()
+        df = self.exporter.extract().drop_duplicates(['name']).reset_index()
         for i in range(len(df)):
             race = Race()
             race.id = i + 1
@@ -112,7 +110,7 @@ class RacesTransformer(Transformer):
 
 
 def get_races_transformer() -> RacesTransformer:
-    exporter = Exporter('races.csv', ['name', 'circuitId'])
+    exporter = Extractor('races.csv', ['name', 'circuitId'])
 
     return RacesTransformer(exporter)
 
@@ -120,7 +118,7 @@ def get_races_transformer() -> RacesTransformer:
 class RoundsTransformer(RelatedModelTransformer):
     @override
     def transform_to_model(self) -> Generator[Round, None, None]:
-        df = self.exporter.export().drop_duplicates().reset_index()
+        df = self.exporter.extract().drop_duplicates().reset_index()
         for i in range(len(df)):
             race_name = df.loc[i, 'name']
             round_entity = Round()
@@ -133,7 +131,7 @@ class RoundsTransformer(RelatedModelTransformer):
 
 def get_rounds_transformer() -> RoundsTransformer:
     Session = get_session()
-    exporter = Exporter('races.csv', ['raceId', 'name', 'round', 'year'])
+    exporter = Extractor('races.csv', ['raceId', 'name', 'round', 'year'])
     with Session() as session:
         races = session.scalars(select(Race))
         data = [(i.id, i.name) for i in races]
@@ -145,7 +143,7 @@ def get_rounds_transformer() -> RoundsTransformer:
 class DriversConstructorsTransformer(Transformer):
     @override
     def transform_to_model(self) -> Generator[DriverConstructor, None, None]:
-        df = self.exporter.export().drop_duplicates(['driverId', 'constructorId']).dropna()
+        df = self.exporter.extract().drop_duplicates(['driverId', 'constructorId']).dropna()
         identifier = 1
         for value in df.values:
             driver_constructor = DriverConstructor()
@@ -158,7 +156,7 @@ class DriversConstructorsTransformer(Transformer):
 
 
 def get_drivers_constructors_transformer() -> DriversConstructorsTransformer:
-    exporter = Exporter('results.csv', ['driverId', 'constructorId'])
+    exporter = Extractor('results.csv', ['driverId', 'constructorId'])
 
     return DriversConstructorsTransformer(exporter)
 
@@ -166,18 +164,19 @@ def get_drivers_constructors_transformer() -> DriversConstructorsTransformer:
 class RaceDriversResultsTransformer(RelatedModelTransformer):
     @override
     def transform_to_model(self) -> Generator[RaceDriverResult, None, None]:
-        df = self.exporter.export()
+        df = self.exporter.extract()
         for i in range(len(df)):
             race_driver_result = RaceDriverResult()
-            driver_constructor = (self.related_model_data
-                                  .where(self.related_model_data['driverId'] == int(df.loc[i, 'driverId']))
-                                  .where(self.related_model_data['constructorId'] == int(df.loc[i, 'constructorId']))
-                                  [['id']].dropna())
+            driver_constructor = find_driver_constructor_id(
+                self.related_model_data,
+                int(df.loc[i, 'driverId']),
+                int(df.loc[i, 'constructorId'])
+            )
 
             fastest_lap_time = convert_time_to_ms(str(df.loc[i, 'fastestLapTime']))
 
             race_driver_result.id = int(df.loc[i, 'resultId'])
-            race_driver_result.driver_constructor_id = int(driver_constructor.values[0][0])
+            race_driver_result.driver_constructor_id = driver_constructor
             race_driver_result.points = float(df.loc[i, 'points'])
             race_driver_result.fastest_lap_time = fastest_lap_time
             race_driver_result.round_id = int(df.loc[i, 'raceId'])
@@ -195,7 +194,7 @@ class RaceDriversResultsTransformer(RelatedModelTransformer):
 
 
 def get_race_drivers_results_transformer():
-    exporter = Exporter('results.csv', [
+    exporter = Extractor('results.csv', [
         'resultId',
         'raceId',
         'driverId',
@@ -206,22 +205,13 @@ def get_race_drivers_results_transformer():
         'position'
     ])
 
-    Session = get_session()
-    with Session() as Session:
-        drivers_constructors = [(i.id, i.driver_id, i.constructor_id) for i in Session.scalars(select(DriverConstructor))]
-        drivers_constructors_df = pd.DataFrame({
-            'id': [i[0] for i in drivers_constructors],
-            'driverId': [i[1] for i in drivers_constructors],
-            'constructorId': [i[2] for i in drivers_constructors]
-        })
-
-    return RaceDriversResultsTransformer(exporter, drivers_constructors_df)
+    return RaceDriversResultsTransformer(exporter, create_drivers_constructors_dataframe())
 
 
 class RaceConstructorsResultsTransformer(Transformer):
     @override
     def transform_to_model(self) -> Generator[RaceConstructorResult, None, None]:
-        df = self.exporter.export()
+        df = self.exporter.extract()
         for i in range(len(df)):
             race_constructor_result = RaceConstructorResult()
             race_constructor_result.id = int(df.loc[i, 'constructorResultsId'])
@@ -233,7 +223,7 @@ class RaceConstructorsResultsTransformer(Transformer):
 
 
 def get_race_constructors_results_transformer():
-    exporter = Exporter('constructor_results.csv', [
+    exporter = Extractor('constructor_results.csv', [
         'constructorResultsId',
         'raceId',
         'constructorId',
@@ -246,17 +236,18 @@ def get_race_constructors_results_transformer():
 class QualifyingResultsTransformer(RelatedModelTransformer):
     @override
     def transform_to_model(self) -> Generator[QualifyingResult, None, None]:
-        df = self.exporter.export()
+        df = self.exporter.extract()
         for i in range(len(df)):
             qualifying_result = QualifyingResult()
-            driver_constructor = (self.related_model_data
-                                  .where(self.related_model_data['driverId'] == int(df.loc[i, 'driverId']))
-                                  .where(self.related_model_data['constructorId'] == int(df.loc[i, 'constructorId']))
-                                  [['id']].dropna())
+            driver_constructor = find_driver_constructor_id(
+                self.related_model_data,
+                int(df.loc[i, 'driverId']),
+                int(df.loc[i, 'constructorId'])
+            )
 
             qualifying_result.id = int(df.loc[i, 'qualifyId'])
             qualifying_result.round_id = int(df.loc[i, 'raceId'])
-            qualifying_result.driver_constructor_id = int(driver_constructor.values[0][0])
+            qualifying_result.driver_constructor_id = driver_constructor
             qualifying_result.position = int(df.loc[i, 'position'])
             qualifying_result.q1 = convert_time_to_ms(df.loc[i, 'q1'])
             qualifying_result.q2 = convert_time_to_ms(df.loc[i, 'q2'])
@@ -266,7 +257,7 @@ class QualifyingResultsTransformer(RelatedModelTransformer):
 
 
 def get_qualifying_results_transformer():
-    exporter = Exporter('qualifying.csv', [
+    exporter = Extractor('qualifying.csv', [
         'qualifyId',
         'raceId',
         'driverId',
@@ -277,13 +268,147 @@ def get_qualifying_results_transformer():
         'position'
     ])
 
-    Session = get_session()
-    with Session() as Session:
-        drivers_constructors = [(i.id, i.driver_id, i.constructor_id) for i in Session.scalars(select(DriverConstructor))]
-        drivers_constructors_df = pd.DataFrame({
-            'id': [i[0] for i in drivers_constructors],
-            'driverId': [i[1] for i in drivers_constructors],
-            'constructorId': [i[2] for i in drivers_constructors]
-        })
+    return QualifyingResultsTransformer(exporter, create_drivers_constructors_dataframe())
 
-    return QualifyingResultsTransformer(exporter, drivers_constructors_df)
+
+class LapTimesTransformer(RelatedModelTransformer):
+    @override
+    def transform_to_model(self):
+        df = self.exporter.extract()
+        for i in range(len(df)):
+            lap_time = LapTimes()
+            lap_time.id = i + 1
+            lap_time.lap = int(df.loc[i, 'lap'])
+            lap_time.position = int(df.loc[i, 'position'])
+            lap_time.time = int(df.loc[i, 'milliseconds'])
+            lap_time.round_id = int(df.loc[i, 'raceId'])
+            lap_time.driver_constructor_id = int(df.loc[i, 'raceId'])
+
+            yield lap_time
+
+
+def get_lap_times_transformer():
+    exporter = Extractor('lap_times.csv', ['raceId', 'driverId', 'lap', 'position', 'milliseconds'])
+
+    return LapTimesTransformer(exporter, create_drivers_constructors_dataframe())
+
+
+class DriversStandingsTransformer(Transformer):
+    @override
+    def transform_to_model(self) -> Generator[RaceDriverStandings, None, None]:
+        df = self.exporter.extract()
+        for i in range(len(df)):
+            race_driver_standings = RaceDriverStandings()
+            race_driver_standings.id = i
+            race_driver_standings.points = float(df.loc[i, 'sum_points'])
+            race_driver_standings.position = int(df.loc[i, 'wdc_position'])
+            race_driver_standings.wins = int(df.loc[i, 'wins'])
+            race_driver_standings.year = int(df.loc[i, 'year'])
+            race_driver_standings.driver_constructor_id = int(df.loc[i, 'driver_constructor_id'])
+
+            yield race_driver_standings
+
+
+def get_drivers_standings_transformer() -> DriversStandingsTransformer:
+    standings_statement = """
+    SELECT
+        rr.year AS year,
+        dc.id AS driver_constructor_id,
+        SUM(dr.points) as sum_points,
+        ROW_NUMBER() OVER (ORDER BY SUM(dr.points) DESC) AS wdc_position
+    FROM race_driver_result dr
+    JOIN driver_constructor dc ON dc.id = dr.driver_constructor_id
+    JOIN round rr ON dr.round_id = rr.id
+    WHERE rr.year = {}
+    GROUP BY rr.year, dc.id
+    """
+
+    wins_statement = """
+    SELECT
+        dc.id AS driver_constructor_id,
+        COUNT(dr2.id) AS wins
+    FROM race_driver_result dr
+    LEFT JOIN race_driver_result dr2 ON dr2.id = dr.id AND dr2.position = 1
+    JOIN round r ON r.id = dr.round_id
+    JOIN driver_constructor dc ON dc.id = dr.driver_constructor_id
+    WHERE r.year = {}
+    GROUP BY dc.id
+    """
+
+    Connection = get_connection()
+
+    full_standings = {}
+    for year in range(1950, 2023):
+        standings_query = text(standings_statement.format(year))
+        wins_query = text(wins_statement.format(year))
+
+        with Connection() as conn:
+            standings, wins = conn.execute(standings_query), conn.execute(wins_query)
+
+        standings_df = pd.DataFrame(standings.fetchall())
+        wins_df = pd.DataFrame(wins.fetchall())
+        standings_df.keys = standings.columns
+        wins_df.keys = wins.columns
+
+        full_standings.update(standings_df.join(wins_df.set_index('driver_constructor_id'), on='driver_constructor_id', lsuffix='_').dropna()[['driver_constructor_id', 'year', 'sum_points', 'wdc_position', 'wins']].to_dict())
+
+    return DriversStandingsTransformer(DirectDataFrameExtractor(pd.DataFrame.from_dict(full_standings)))
+
+class ConstructorsStandingsTransformer(Transformer):
+    @override
+    def transform_to_model(self) -> Generator[RaceConstructorStandings, None, None]:
+        df = self.exporter.extract()
+        for i in range(len(df)):
+            race_constructor_standings = RaceConstructorStandings()
+            race_constructor_standings.id = i
+            race_constructor_standings.points = float(df.loc[i, 'sum_points'])
+            race_constructor_standings.position = int(df.loc[i, 'wcc_position'])
+            race_constructor_standings.wins = int(df.loc[i, 'wins'])
+            race_constructor_standings.year = int(df.loc[i, 'year'])
+            race_constructor_standings.constructor_id = int(df.loc[i, 'constructor_id'])
+
+            yield race_constructor_standings
+
+def get_constructors_standings_transformer():
+    standings_statement = """
+    SELECT
+        rr.year AS year,
+        dc.constructor_id AS constructor_id,
+        SUM(dr.points) as sum_points,
+        ROW_NUMBER() OVER (ORDER BY SUM(dr.points) DESC) AS wcc_position
+    FROM race_driver_result dr
+    JOIN driver_constructor dc ON dc.id = dr.driver_constructor_id
+    JOIN round rr ON dr.round_id = rr.id
+    WHERE rr.year = {}
+    GROUP BY rr.year, dc.constructor_id
+    """
+
+    wins_statement = """
+    SELECT
+        dc.constructor_id AS constructor_id,
+        COUNT(dr2.id) AS wins
+    FROM race_driver_result dr
+    LEFT JOIN race_driver_result dr2 ON dr2.id = dr.id AND dr2.position = 1
+    JOIN round r ON r.id = dr.round_id
+    JOIN driver_constructor dc ON dc.id = dr.driver_constructor_id
+    WHERE r.year = {}
+    GROUP BY dc.constructor_id
+    """
+
+    Connection = get_connection()
+    full_standings = {}
+    for year in range(1950, 2023):
+        standings_query = text(standings_statement.format(year))
+        wins_query = text(wins_statement.format(year))
+
+        with Connection() as conn:
+            standings, wins = conn.execute(standings_query), conn.execute(wins_query)
+
+        standings_df = pd.DataFrame(standings.fetchall())
+        wins_df = pd.DataFrame(wins.fetchall())
+        standings_df.keys = standings.columns
+        wins_df.keys = wins.columns
+
+        full_standings.update(standings_df.join(wins_df.set_index('constructor_id'), on='constructor_id',lsuffix='_').dropna()[['constructor_id', 'year', 'sum_points', 'wcc_position', 'wins']].to_dict())
+
+    return ConstructorsStandingsTransformer(DirectDataFrameExtractor(pd.DataFrame.from_dict(full_standings)))
