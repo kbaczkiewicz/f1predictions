@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Engine
+from sqlalchemy import create_engine, Engine, Connection
 import sqlalchemy.orm as orm
 from sqlalchemy.orm import sessionmaker, Session
 
@@ -25,17 +25,17 @@ def create_schema():
     Base.metadata.drop_all(get_engine())
     Base.metadata.create_all(get_engine())
 
+
 def get_session():
-    global _SESSION
-    if _SESSION is not None:
-        return _SESSION
-
     session = sessionmaker(get_engine())
-    _SESSION = session()
 
-    return _SESSION
+    return session
 
 
 def clear_database():
     Base.metadata.drop_all(bind=get_engine())
     Base.metadata.create_all(bind=get_engine())
+
+
+def get_connection():
+    return get_engine().connect

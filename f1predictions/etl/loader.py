@@ -1,15 +1,17 @@
-from typing import Generator
+from typing import Generator, Any
 
 from f1predictions.database import get_session, clear_database
+from f1predictions.utils import print_model
 
 
-def load_data(models: dict[Generator]):
-    clear_database()
-    db_session = get_session()
+def load_data(models: Generator[Any, None, None], debug: bool = False):
+    Session = get_session()
 
-    for model in models.values():
-        for data in model:
-            db_session.add(data)
+    with Session() as db_session:
+        for model in models:
+            if debug:
+                print_model(model)
+            db_session.add(model)
 
-    db_session.commit()
-
+        db_session.commit()
+        db_session.flush()
