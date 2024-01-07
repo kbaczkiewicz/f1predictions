@@ -29,6 +29,7 @@ class Constructor(Base):
 class DriverConstructor(Base):
     __tablename__ = 'driver_constructor'
     id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    year: orm.Mapped[int] = orm.mapped_column(Integer)
 
     driver_id: orm.Mapped[int] = orm.mapped_column(ForeignKey('driver.id'))
     constructor_id: orm.Mapped[int] = orm.mapped_column(ForeignKey('constructor.id'))
