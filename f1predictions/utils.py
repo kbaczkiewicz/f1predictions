@@ -2,7 +2,7 @@ import pandas as pd
 from sqlalchemy import select
 
 from f1predictions.database import get_session
-from f1predictions.model import DriverConstructor
+from f1predictions.model import DriverConstructor, Race, Round
 
 
 def convert_time_to_ms(time: str) -> int:
@@ -25,21 +25,38 @@ def print_model(model):
 
 def create_drivers_constructors_dataframe() -> pd.DataFrame:
     Session = get_session()
-    with Session() as Session:
-        drivers_constructors = [(i.id, i.driver_id, i.constructor_id) for i in
-                                Session.scalars(select(DriverConstructor))]
-        drivers_constructors_df = pd.DataFrame({
+    with Session() as session:
+        drivers_constructors = [(i.id, i.driver_id, i.constructor_id, i.year) for i in
+                                session.scalars(select(DriverConstructor))]
+
+    return pd.DataFrame({
             'id': [i[0] for i in drivers_constructors],
             'driverId': [i[1] for i in drivers_constructors],
-            'constructorId': [i[2] for i in drivers_constructors]
+            'constructorId': [i[2] for i in drivers_constructors],
+            'year': [i[3] for i in drivers_constructors]
         })
 
-    return drivers_constructors_df
+
+def create_rounds_dataframe() -> pd.DataFrame:
+    Session = get_session()
+    with Session() as session:
+        rounds = [(i.id, i.year) for i in
+                 session.scalars(select(Round))]
+
+    return pd.DataFrame({
+        'id': [i[0] for i in rounds],
+        'year': [i[1] for i in rounds]
+    })
 
 
-def find_driver_constructor_id(drivers_constructors_df: pd.DataFrame, driver_id: int, constructor_id: int) -> int:
-    return int(drivers_constructors_df
+def find_driver_constructor_id(drivers_constructors_df: pd.DataFrame, driver_id: int, constructor_id: int, year: int) -> int:
+    df = (drivers_constructors_df
      .where(drivers_constructors_df['driverId'] == driver_id)
      .where(drivers_constructors_df['constructorId'] == constructor_id)
      .dropna()
-     ['id'].unique()[0])
+    )
+
+    if year is not None:
+        df = df.where(drivers_constructors_df['year'] == year)
+
+    return df['id'].dropna().unique()[0]
