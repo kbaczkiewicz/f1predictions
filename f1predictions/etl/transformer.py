@@ -194,6 +194,7 @@ class RaceDriversResultsTransformer(RelatedModelsTransformer):
             race_driver_result.points = float(df.loc[i, 'points'])
             race_driver_result.fastest_lap_time = fastest_lap_time
             race_driver_result.round_id = int(df.loc[i, 'raceId'])
+            race_driver_result.status_id = int(df.loc[i, 'statusId'])
             if "\\N" == df.loc[i, 'position']:
                 race_driver_result.position = 0
             else:
@@ -204,7 +205,7 @@ class RaceDriversResultsTransformer(RelatedModelsTransformer):
             else:
                 race_driver_result.fastest_lap_speed = float(df.loc[i, 'fastestLapSpeed'])
 
-            yield  race_driver_result
+            yield race_driver_result
 
 
 def get_race_drivers_results_transformer():
@@ -216,7 +217,8 @@ def get_race_drivers_results_transformer():
         'points',
         'fastestLapTime',
         'fastestLapSpeed',
-        'position'
+        'position',
+        'statusId'
     ])
 
     return RaceDriversResultsTransformer(extractor, {
