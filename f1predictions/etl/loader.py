@@ -1,6 +1,8 @@
 from typing import Generator, Any
 
-from f1predictions.database import get_session, clear_database
+from sqlalchemy import text
+
+from f1predictions.database import get_session, clear_database, get_connection
 from f1predictions.utils import print_model
 
 
@@ -15,3 +17,11 @@ def load_data(models: Generator[Any, None, None], debug: bool = False):
 
         db_session.commit()
         db_session.flush()
+
+
+def load_view(statement: text):
+    Connection = get_connection()
+    with Connection() as conn:
+        conn.execute(statement)
+        conn.commit()
+

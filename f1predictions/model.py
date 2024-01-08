@@ -85,6 +85,7 @@ class RaceDriverResult(Base):
 
     driver_constructor_id: orm.Mapped[int] = orm.mapped_column(ForeignKey('driver_constructor.id'))
     round_id: orm.Mapped[int] = orm.mapped_column(ForeignKey('round.id'))
+    status_id: orm.Mapped[int] = orm.mapped_column(ForeignKey('status.id'))
 
 
 class RaceConstructorResult(Base):
