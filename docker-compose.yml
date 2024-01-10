@@ -8,3 +8,15 @@ services:
       - POSTGRES_PASSWORD=toor
       - POSTGRES_USER=root
       - POSTGRES_DB=f1predictions
+  jupyter:
+    build:
+      context: ./
+      dockerfile: ./.docker/jupyter/Dockerfile
+    volumes:
+      - ./f1predictions:/home/jovyan/f1predictions
+      - ./notebooks:/home/jovyan/
+    ports:
+      - 8888:8888
+    container_name: jupyter_notebook
+    command: "start-notebook.sh --NotebookApp.token="
+
