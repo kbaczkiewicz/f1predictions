@@ -2,7 +2,7 @@ import pandas as pd
 from sqlalchemy import select
 
 from f1predictions.database import get_session
-from f1predictions.model import DriverConstructor, Race, Round
+from f1predictions.entity import DriverConstructor, Race, Round
 
 
 def convert_time_to_ms(time: str) -> int:

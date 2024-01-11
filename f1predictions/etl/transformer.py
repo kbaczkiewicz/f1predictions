@@ -1,10 +1,10 @@
 from abc import abstractmethod, ABC
-from typing import Generator, override
+from typing import Generator
 from f1predictions.database import get_session, get_connection
 from sqlalchemy import select, text
 import pandas as pd
 from f1predictions.etl.extractor import Extractor, DirectDataFrameExtractor
-from f1predictions.model import Driver, Constructor, Status, Circuit, Race, Round, DriverConstructor, RaceDriverResult, RaceConstructorResult, RaceDriverStandings, RaceConstructorStandings, LapTimes, QualifyingResult
+from f1predictions.entity import Driver, Constructor, Status, Circuit, Race, Round, DriverConstructor, RaceDriverResult, RaceConstructorResult, RaceDriverStandings, RaceConstructorStandings, LapTimes, QualifyingResult
 from f1predictions.utils import convert_time_to_ms, create_drivers_constructors_dataframe, find_driver_constructor_id, \
     create_rounds_dataframe
 
@@ -25,7 +25,6 @@ class RelatedModelsTransformer(Transformer, ABC):
 
 
 class DriversTransformer(Transformer):
-    @override
     def transform_to_model(self) -> Generator[Driver, None, None]:
         df = self.extractor.extract()
         for i in range(len(df)):
@@ -44,7 +43,6 @@ def get_drivers_transformer() -> DriversTransformer:
 
 
 class ConstructorsTransformer(Transformer):
-    @override
     def transform_to_model(self) -> Generator[Constructor, None, None]:
         df = self.extractor.extract()
         for i in range(len(df)):
@@ -62,7 +60,6 @@ def get_constructors_transformer() -> ConstructorsTransformer:
 
 
 class StatusesTransformer(Transformer):
-    @override
     def transform_to_model(self) -> Generator[Status, None, None]:
         df = self.extractor.extract()
         for i in range(len(df)):
@@ -80,7 +77,6 @@ def get_statuses_transformer() -> StatusesTransformer:
 
 
 class CircuitsTransformer(Transformer):
-    @override
     def transform_to_model(self) -> Generator[Circuit, None, None]:
         df = self.extractor.extract()
         for i in range(len(df)):
@@ -98,7 +94,6 @@ def get_circuits_transformer() -> CircuitsTransformer:
 
 
 class RacesTransformer(Transformer):
-    @override
     def transform_to_model(self) -> Generator[Race, None, None]:
         df = self.extractor.extract().drop_duplicates(['name']).reset_index()
         for i in range(len(df)):
@@ -117,7 +112,6 @@ def get_races_transformer() -> RacesTransformer:
 
 
 class RoundsTransformer(RelatedModelsTransformer):
-    @override
     def transform_to_model(self) -> Generator[Round, None, None]:
         df = self.extractor.extract().drop_duplicates().reset_index()
         races_df = self.related_model_data['races']
@@ -143,7 +137,6 @@ def get_rounds_transformer() -> RoundsTransformer:
 
 
 class DriversConstructorsTransformer(RelatedModelsTransformer):
-    @override
     def transform_to_model(self) -> Generator[DriverConstructor, None, None]:
         df = self.extractor.extract()
         rounds_df = self.related_model_data['rounds']
@@ -173,7 +166,6 @@ def get_drivers_constructors_transformer() -> DriversConstructorsTransformer:
 
 
 class RaceDriversResultsTransformer(RelatedModelsTransformer):
-    @override
     def transform_to_model(self) -> Generator[RaceDriverResult, None, None]:
         df = self.extractor.extract()
         for i in range(len(df)):
@@ -228,7 +220,6 @@ def get_race_drivers_results_transformer():
 
 
 class RaceConstructorsResultsTransformer(Transformer):
-    @override
     def transform_to_model(self) -> Generator[RaceConstructorResult, None, None]:
         df = self.extractor.extract()
         for i in range(len(df)):
@@ -253,7 +244,6 @@ def get_race_constructors_results_transformer():
 
 
 class QualifyingResultsTransformer(RelatedModelsTransformer):
-    @override
     def transform_to_model(self) -> Generator[QualifyingResult, None, None]:
         df = self.extractor.extract()
         for i in range(len(df)):
@@ -296,7 +286,6 @@ def get_qualifying_results_transformer():
 
 
 class LapTimesTransformer(RelatedModelsTransformer):
-    @override
     def transform_to_model(self):
         df = self.extractor.extract()
         for i in range(len(df)):
@@ -321,7 +310,6 @@ def get_lap_times_transformer():
 
 
 class DriversStandingsTransformer(Transformer):
-    @override
     def transform_to_model(self) -> Generator[RaceDriverStandings, None, None]:
         df = self.extractor.extract()
         index = 1
@@ -386,7 +374,6 @@ def get_drivers_standings_transformer() -> DriversStandingsTransformer:
     return DriversStandingsTransformer(DirectDataFrameExtractor(pd.concat([i for i in full_standings])))
 
 class ConstructorsStandingsTransformer(Transformer):
-    @override
     def transform_to_model(self) -> Generator[RaceConstructorStandings, None, None]:
         df = self.extractor.extract().reset_index()
         index = 1

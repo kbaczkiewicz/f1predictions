@@ -48,7 +48,6 @@ def create_materialized_views():
     load_view(viewdef.opponents_rounds_results_view)
 
 
-
 if __name__ == '__main__':
-    # load_models()
+    load_models()
     create_materialized_views()
