@@ -1,7 +1,7 @@
 from typing import Optional
 from sqlalchemy import ForeignKey, String, Integer, Float
 import sqlalchemy.orm as orm
-from .database import Base
+from f1predictions.orm.config.database import Base
 
 
 class Driver(Base):
@@ -132,3 +132,13 @@ class LapTimes(Base):
 
     driver_constructor_id: orm.Mapped[int] = orm.mapped_column(ForeignKey('driver_constructor.id'))
     round_id: orm.Mapped[int] = orm.mapped_column(ForeignKey('round.id'))
+
+
+class DriverRating(Base):
+    __tablename__ = 'driver_rating'
+
+    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    rating: orm.Mapped[float] = orm.mapped_column(Float)
+    year: orm.Mapped[int] = orm.mapped_column(Integer)
+
+    driver_id = orm.mapped_column(ForeignKey('driver.id'))

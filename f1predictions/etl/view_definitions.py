@@ -18,7 +18,7 @@ drivers_seasons_results_view = text(
 
 opponents_seasons_results_view = text(
     """
-    CREATE MATERIALIZED VIEW IF NOT EXISTS drivers_seasons_results_view AS
+    CREATE MATERIALIZED VIEW IF NOT EXISTS opponents_seasons_results_view AS
         SELECT d.driver_id,
                d.year,
                SUM(rds.points)   AS season_points,

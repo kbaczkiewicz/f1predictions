@@ -1,4 +1,4 @@
-from f1predictions.database import clear_database
+from f1predictions.orm.config.database import clear_database
 from f1predictions.etl.transformer import *
 
 from f1predictions.etl.loader import load_data, load_view
@@ -35,6 +35,8 @@ def load_models():
     load_data(get_drivers_standings_transformer().transform_to_model())
     print("Loading constructor standings...")
     load_data(get_constructors_standings_transformer().transform_to_model())
+    print("Loading saved drivers ratings...")
+    load_data(get_drivers_ratings_transformer().transform_to_model())
 
 
 def create_materialized_views():
