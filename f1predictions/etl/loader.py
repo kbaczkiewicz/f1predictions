@@ -1,18 +1,13 @@
 from typing import Generator, Any
-
 from sqlalchemy import text
-
-from f1predictions.database import get_session, clear_database, get_connection
-from f1predictions.utils import print_model
+from f1predictions.orm.config.database import get_session, get_connection
 
 
-def load_data(models: Generator[Any, None, None], debug: bool = False):
+def load_data(models: Generator[Any, None, None]):
     Session = get_session()
 
     with Session() as db_session:
         for model in models:
-            if debug:
-                print_model(model)
             db_session.add(model)
 
         db_session.commit()

@@ -15,7 +15,7 @@ def get_engine() -> Engine:
     if _ENGINE:
         return _ENGINE
 
-    connstr = "postgresql+psycopg2://root:toor@postgres:5432/f1predictions"
+    connstr = "postgresql+psycopg2://root:toor@localhost:5432/f1predictions"
     _ENGINE = create_engine(connstr)
 
     return _ENGINE
@@ -38,6 +38,7 @@ def clear_database():
         conn.execute(text("DROP MATERIALIZED VIEW IF EXISTS drivers_rounds_results_view"))
         conn.execute(text("DROP MATERIALIZED VIEW IF EXISTS drivers_seasons_results_view"))
         conn.execute(text("DROP MATERIALIZED VIEW IF EXISTS opponents_rounds_results_view"))
+        conn.execute(text("DROP MATERIALIZED VIEW IF EXISTS opponents_seasons_results_view"))
         conn.commit()
 
     Base.metadata.drop_all(bind=get_engine())

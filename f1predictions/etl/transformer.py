@@ -1,10 +1,11 @@
 from abc import abstractmethod, ABC
 from typing import Generator
-from f1predictions.database import get_session, get_connection
+from f1predictions.orm.config.database import get_session, get_connection
 from sqlalchemy import select, text
 import pandas as pd
 from f1predictions.etl.extractor import Extractor, DirectDataFrameExtractor
-from f1predictions.entity import Driver, Constructor, Status, Circuit, Race, Round, DriverConstructor, RaceDriverResult, RaceConstructorResult, RaceDriverStandings, RaceConstructorStandings, LapTimes, QualifyingResult
+from f1predictions.orm.entity import Driver, Constructor, Status, Circuit, Race, Round, DriverConstructor, RaceDriverResult, \
+    RaceConstructorResult, RaceDriverStandings, RaceConstructorStandings, LapTimes, QualifyingResult, DriverRating
 from f1predictions.utils import convert_time_to_ms, create_drivers_constructors_dataframe, find_driver_constructor_id, \
     create_rounds_dataframe
 
@@ -119,7 +120,8 @@ class RoundsTransformer(RelatedModelsTransformer):
             race_name = df.loc[i, 'name']
             round_entity = Round()
             round_entity.id = int(df.loc[i, 'raceId'])
-            round_entity.race_id = int(races_df.where(races_df['name'] == str(race_name)).drop_duplicates().dropna().values[0][0])
+            round_entity.race_id = int(
+                races_df.where(races_df['name'] == str(race_name)).drop_duplicates().dropna().values[0][0])
             round_entity.round_number = int(df.loc[i, 'round'])
             round_entity.year = int(df.loc[i, 'year'])
             yield round_entity
@@ -140,7 +142,8 @@ class DriversConstructorsTransformer(RelatedModelsTransformer):
     def transform_to_model(self) -> Generator[DriverConstructor, None, None]:
         df = self.extractor.extract()
         rounds_df = self.related_model_data['rounds']
-        df = df.join(rounds_df.set_index('raceId'), on='raceId').dropna().drop_duplicates(['driverId', 'constructorId', 'year'])[['driverId', 'constructorId', 'year']]
+        df = df.join(rounds_df.set_index('raceId'), on='raceId').dropna().drop_duplicates(
+            ['driverId', 'constructorId', 'year'])[['driverId', 'constructorId', 'year']]
         identifier = 1
         for value in df.values:
             driver_constructor = DriverConstructor()
@@ -247,7 +250,8 @@ class QualifyingResultsTransformer(RelatedModelsTransformer):
     def transform_to_model(self) -> Generator[QualifyingResult, None, None]:
         df = self.extractor.extract()
         for i in range(len(df)):
-            race = self.related_model_data['rounds'].where(self.related_model_data['rounds']['id'] == int(df.loc[i, 'raceId']))['year'].dropna()
+            race = self.related_model_data['rounds'].where(
+                self.related_model_data['rounds']['id'] == int(df.loc[i, 'raceId']))['year'].dropna()
             qualifying_result = QualifyingResult()
             driver_constructor = find_driver_constructor_id(
                 self.related_model_data['drivers_constructors'],
@@ -373,6 +377,7 @@ def get_drivers_standings_transformer() -> DriversStandingsTransformer:
 
     return DriversStandingsTransformer(DirectDataFrameExtractor(pd.concat([i for i in full_standings])))
 
+
 class ConstructorsStandingsTransformer(Transformer):
     def transform_to_model(self) -> Generator[RaceConstructorStandings, None, None]:
         df = self.extractor.extract().reset_index()
@@ -435,3 +440,22 @@ def get_constructors_standings_transformer():
                               [['constructor_id', 'year', 'sum_points', 'wcc_position', 'wins']])
 
     return ConstructorsStandingsTransformer(DirectDataFrameExtractor(pd.concat([i for i in full_standings])))
+
+
+class DriversRatingsTransformer(Transformer):
+    def transform_to_model(self) -> Generator[DriverRating, None, None]:
+        df = self.extractor.extract()
+        for i in range(len(df)):
+            rating = DriverRating()
+            rating.id = i + 1
+            rating.driver_id = int(df['driverId'].iloc[i])
+            rating.year = int(df['year'].iloc[i])
+            rating.rating = float(df['rank'].iloc[i])
+
+            yield rating
+
+
+def get_drivers_ratings_transformer() -> DriversRatingsTransformer:
+    extractor = Extractor('power_rankings.csv', ['driverId', 'year', 'rank'])
+
+    return DriversRatingsTransformer(extractor)
