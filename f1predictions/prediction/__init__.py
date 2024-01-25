@@ -73,9 +73,9 @@ class AbstractDecisionTreeBasedClassifierBuilder(AbstractBuilder):
 
     @abstractmethod
     def set_criterion(self, criterion: str):
-        if criterion not in ['squared_error', 'friedman_mse', 'absolute_error', 'poisson']:
+        if criterion not in ['gini', 'entropy', 'log_loss']:
             raise ValueError(
-                'Criterion must be on of the: squared_error, friedman_mse, absolute_error, poisson, {} given'
+                'Criterion must be on of the: gini, entropy, log_loss, {} given'
                 .format(criterion)
             )
 

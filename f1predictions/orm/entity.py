@@ -1,7 +1,8 @@
 from typing import Optional
-from sqlalchemy import ForeignKey, String, Integer, Float
+from sqlalchemy import ForeignKey, String, Integer, Float, Enum
 import sqlalchemy.orm as orm
 from f1predictions.orm.config.database import Base
+from f1predictions.orm.enums import DriverCategoryEnum
 
 
 class Driver(Base):
@@ -139,6 +140,16 @@ class DriverRating(Base):
 
     id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
     rating: orm.Mapped[float] = orm.mapped_column(Float)
+    year: orm.Mapped[int] = orm.mapped_column(Integer)
+
+    driver_id = orm.mapped_column(ForeignKey('driver.id'))
+
+
+class DriverCategory(Base):
+    __tablename__ = 'driver_category'
+
+    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    category: orm.Mapped[Enum] = orm.mapped_column(Enum(DriverCategoryEnum))
     year: orm.Mapped[int] = orm.mapped_column(Integer)
 
     driver_id = orm.mapped_column(ForeignKey('driver.id'))
