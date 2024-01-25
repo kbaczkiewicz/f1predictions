@@ -1,10 +1,10 @@
 from abc import ABC
 from typing import Sequence
 
-from sqlalchemy import Select, Row
+from sqlalchemy import Select
 from sqlalchemy.orm import sessionmaker
 
-from f1predictions.orm.entity import DriverRating, Driver
+from f1predictions.orm.entity import DriverRating, Driver, DriverCategory
 
 
 class Query(ABC):
@@ -31,6 +31,20 @@ class DriverRatingQuery(Query):
         with self._sessionmaker() as session:
             return session.scalars(Select(DriverRating).filter_by(driver_id=driver_id, year=year)).one_or_none()
 
-    def get_driver_rating_by_year(self, year: int) -> Sequence[DriverRating]:
+    def get_drivers_ratings_by_year(self, year: int) -> Sequence[DriverRating]:
         with self._sessionmaker() as session:
             return session.scalars(Select(DriverRating).filter_by(year=year)).all()
+
+
+class DriverCategoryQuery(Query):
+    def get_drivers_categories(self) -> Sequence[DriverCategory]:
+        with self._sessionmaker() as session:
+            return session.scalars(Select(DriverCategory)).all()
+
+    def get_driver_category(self, driver_id: int, year: int) -> DriverCategory:
+        with self._sessionmaker() as session:
+            return session.scalars(Select(DriverCategory).filter_by(driver_id=driver_id, year=year)).one_or_none()
+
+    def get_drivers_categories_by_year(self, year: int) -> Sequence[DriverCategory]:
+        with self._sessionmaker() as session:
+            return session.scalars(Select(DriverCategory).filter_by(year=year)).all()

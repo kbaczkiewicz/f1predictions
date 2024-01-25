@@ -4,8 +4,11 @@ from f1predictions.orm.config.database import get_session, get_connection
 from sqlalchemy import select, text
 import pandas as pd
 from f1predictions.etl.extractor import Extractor, DirectDataFrameExtractor
-from f1predictions.orm.entity import Driver, Constructor, Status, Circuit, Race, Round, DriverConstructor, RaceDriverResult, \
-    RaceConstructorResult, RaceDriverStandings, RaceConstructorStandings, LapTimes, QualifyingResult, DriverRating
+from f1predictions.orm.entity import Driver, Constructor, Status, Circuit, Race, Round, DriverConstructor, \
+    RaceDriverResult, \
+    RaceConstructorResult, RaceDriverStandings, RaceConstructorStandings, LapTimes, QualifyingResult, DriverRating, \
+    DriverCategory
+from f1predictions.orm.enums import DriverCategoryEnum
 from f1predictions.utils import convert_time_to_ms, create_drivers_constructors_dataframe, find_driver_constructor_id, \
     create_rounds_dataframe
 
@@ -450,7 +453,7 @@ class DriversRatingsTransformer(Transformer):
             rating.id = i + 1
             rating.driver_id = int(df['driverId'].iloc[i])
             rating.year = int(df['year'].iloc[i])
-            rating.rating = float(df['rank'].iloc[i])
+            rating.category = float(df['rank'].iloc[i])
 
             yield rating
 
@@ -459,3 +462,22 @@ def get_drivers_ratings_transformer() -> DriversRatingsTransformer:
     extractor = Extractor('power_rankings.csv', ['driverId', 'year', 'rank'])
 
     return DriversRatingsTransformer(extractor)
+
+
+class DriversCategoriesTransformer(Transformer):
+    def transform_to_model(self) -> Generator[DriverCategory, None, None]:
+        df = self.extractor.extract()
+        for i in range(len(df)):
+            category = DriverCategory()
+            category.id = i + 1
+            category.driver_id = int(df['driverId'].iloc[i])
+            category.year = int(df['year'].iloc[i])
+            category.category = DriverCategoryEnum(int(df['category'].iloc[i]))
+
+            yield category
+
+
+def get_drivers_categories_transformer() -> DriversCategoriesTransformer:
+    extractor = Extractor('driver_categories.csv', ['driverId', 'year', 'category'])
+
+    return DriversCategoriesTransformer(extractor)

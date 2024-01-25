@@ -61,3 +61,18 @@ class DriverRatingModel:
             self.percentage_constructor_points
         ]
 
+
+class DriverCategoryModel:
+    driver_rating_model: DriverRatingModel
+    rating: float
+
+    def __init__(self, driver_rating_model: DriverRatingModel, rating: float):
+        self.driver_rating_model = driver_rating_model
+        self.rating = rating
+
+    def to_list(self) -> list:
+        model_list = self.driver_rating_model.to_list()
+        model_list.append(self.rating)
+
+        return model_list
+

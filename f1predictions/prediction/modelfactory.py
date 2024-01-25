@@ -1,9 +1,9 @@
 from f1predictions.orm.query import DriverQuery
-from f1predictions.prediction.model import DriverRatingModel
+from f1predictions.prediction.model import DriverRatingModel, DriverCategoryModel
 from f1predictions.orm.dbal.view import *
 
 
-class DriverRatingsModelFactory():
+class DriverRatingsModelFactory:
     def __init__(self, driver_query: DriverQuery):
         self._driver_query = driver_query
 
@@ -42,3 +42,13 @@ class DriverRatingsModelFactory():
         return df['q3_appearances'].iloc[0] > df['q3_appearances_o'].iloc[0] \
             if round(df['avg_qualifying_position'].iloc[0]) == (df['avg_qualifying_position_o'].iloc[0]) \
             else round(df['avg_qualifying_position'].iloc[0]) < (df['avg_qualifying_position_o'].iloc[0])
+
+
+class DriverCategoryModelFactory:
+    def __init__(self, driver_ratings_model_factory: DriverRatingsModelFactory):
+        self.driver_ratings_model_factory = driver_ratings_model_factory
+
+    def create_driver_category_model(self, driver_id: int, year: int, rating: float) -> DriverCategoryModel:
+        return DriverCategoryModel(
+            self.driver_ratings_model_factory.create_driver_ratings_model(driver_id, year), rating
+        )
