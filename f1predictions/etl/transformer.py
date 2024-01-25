@@ -453,7 +453,7 @@ class DriversRatingsTransformer(Transformer):
             rating.id = i + 1
             rating.driver_id = int(df['driverId'].iloc[i])
             rating.year = int(df['year'].iloc[i])
-            rating.category = float(df['rank'].iloc[i])
+            rating.rating = float(df['rank'].iloc[i])
 
             yield rating
 
