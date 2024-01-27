@@ -15,7 +15,7 @@ def get_engine() -> Engine:
     if _ENGINE:
         return _ENGINE
 
-    connstr = "postgresql+psycopg2://root:toor@localhost:5432/f1predictions"
+    connstr = "postgresql+psycopg2://root:toor@postgres:5432/f1predictions"
     _ENGINE = create_engine(connstr)
 
     return _ENGINE
