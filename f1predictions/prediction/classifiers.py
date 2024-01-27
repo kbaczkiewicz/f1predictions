@@ -173,7 +173,7 @@ class KNNClassifierBuilder(AbstractBuilder):
         X, y, X_test, y_test = self._get_model()
         algorithm = algorithm if algorithm is not None else 'auto'
 
-        self.classifier = KNeighborsClassifier(n_neighbors=n_neighbors, algorithm=algorithm)
+        self.classifier = KNeighborsClassifier(n_neighbors=1, algorithm=algorithm)
         self.classifier.fit(X, y)
         best_score = self.classifier.score(X_test, y_test)
         for i in range(1, n_neighbors):
